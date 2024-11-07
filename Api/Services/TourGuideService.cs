@@ -90,18 +90,16 @@ public class TourGuideService : ITourGuideService
         return visitedLocation;
     }
 
-    public List<Attraction> GetNearByAttractions(VisitedLocation visitedLocation)
+    public Dictionary<Attraction, double> GetNearByAttractions(VisitedLocation visitedLocation)
     {
-        List<Attraction> nearbyAttractions = new ();
+        Dictionary<Attraction, double> dict = new Dictionary<Attraction, double>();
+
         foreach (var attraction in _gpsUtil.GetAttractions())
         {
-            if (_rewardsService.IsWithinAttractionProximity(attraction, visitedLocation.Location))
-            {
-                nearbyAttractions.Add(attraction);
-            }
+            dict.Add(attraction, _rewardsService.GetDistance(attraction, visitedLocation.Location));
         }
-
-        return nearbyAttractions;
+        dict = dict.OrderBy(kvp => kvp.Value).Take(5).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        return dict;
     }
 
     private void AddShutDownHook()
