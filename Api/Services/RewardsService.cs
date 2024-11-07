@@ -1,4 +1,5 @@
 ﻿using GpsUtil.Location;
+using System.Collections.Concurrent;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -32,23 +33,36 @@ public class RewardsService : IRewardsService
         _proximityBuffer = _defaultProximityBuffer;
     }
 
-    public void CalculateRewards(User user)
+    public async Task CalculateRewards(User user)
     {
         count++;
-        List<VisitedLocation> userLocations = user.VisitedLocations;
         List<Attraction> attractions = _gpsUtil.GetAttractions();
 
-        foreach (var visitedLocation in userLocations)
+        var rewardedAttractions = new HashSet<string>(user.UserRewards.Select(r => r.Attraction.AttractionName));
+        var rewardsToAdd = new ConcurrentBag<UserReward>();
+        List<Task> tasks = new List<Task>();
+
+        foreach (var attraction in attractions)
         {
-            foreach (var attraction in attractions)
+            tasks.Add(Task.Run(() =>
             {
-                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+                if (!rewardedAttractions.Contains(attraction.AttractionName))
                 {
-                    if (NearAttraction(visitedLocation, attraction))
+                    var visitedLocation = user.VisitedLocations
+                        .FirstOrDefault(location => NearAttraction(location, attraction));
+
+                    if (visitedLocation != null)
                     {
-                        user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
+                        var rewardPoints = GetRewardPoints(attraction, user);
+                        rewardsToAdd.Add(new UserReward(visitedLocation, attraction, rewardPoints));
                     }
                 }
+            }));
+
+            await Task.WhenAll(tasks);
+            foreach (var reward in rewardsToAdd)
+            {
+                user.AddUserReward(reward);
             }
         }
     }

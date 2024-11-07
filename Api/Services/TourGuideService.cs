@@ -53,9 +53,9 @@ public class TourGuideService : ITourGuideService
         return user.UserRewards;
     }
 
-    public VisitedLocation GetUserLocation(User user)
+    public async Task<VisitedLocation> GetUserLocation(User user)
     {
-        return user.VisitedLocations.Any() ? user.GetLastVisitedLocation() : TrackUserLocation(user);
+        return user.VisitedLocations.Any() ? user.GetLastVisitedLocation() : await TrackUserLocation(user);
     }
 
     public User GetUser(string userName)
@@ -86,15 +86,15 @@ public class TourGuideService : ITourGuideService
         return providers;
     }
 
-    public VisitedLocation TrackUserLocation(User user)
+    public async Task<VisitedLocation> TrackUserLocation(User user)
     {
         VisitedLocation visitedLocation = _gpsUtil.GetUserLocation(user.UserId);
         user.AddToVisitedLocations(visitedLocation);
-        _rewardsService.CalculateRewards(user);
+        await _rewardsService.CalculateRewards(user);
         return visitedLocation;
     }
 
-    public List<NearAttraction> GetNearByAttractions(VisitedLocation visitedLocation)
+    public async Task<List<NearAttraction>> GetNearByAttractions(VisitedLocation visitedLocation)
     {
         Dictionary<Attraction, double> dict = new Dictionary<Attraction, double>();
 
@@ -104,11 +104,11 @@ public class TourGuideService : ITourGuideService
         }
         dict = dict.OrderBy(kvp => kvp.Value).Take(5).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-        var nearAttraction = MapToNearAttraction(dict, visitedLocation);
+        var nearAttraction = await MapToNearAttraction(dict, visitedLocation);
         return nearAttraction;
     }
 
-    private List<NearAttraction> MapToNearAttraction(Dictionary<Attraction, double> attractions, VisitedLocation visitedLocation)
+    private async Task<List<NearAttraction>> MapToNearAttraction(Dictionary<Attraction, double> attractions, VisitedLocation visitedLocation)
     {
         return attractions.Select(atr => new NearAttraction
         {
