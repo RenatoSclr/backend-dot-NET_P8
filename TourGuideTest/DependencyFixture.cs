@@ -9,6 +9,7 @@ using TourGuide.Services;
 using TourGuide.LibrairiesWrappers;
 using Microsoft.Extensions.Logging;
 using TourGuide.Utilities;
+using RewardCentral;
 
 namespace TourGuideTest
 {
@@ -37,7 +38,7 @@ namespace TourGuideTest
             RewardCentral = new RewardCentralWrapper();
             GpsUtil = new GpsUtilWrapper();
             RewardsService = new RewardsService(GpsUtil, RewardCentral);
-            TourGuideService = new TourGuideService(tourGuideLogger, GpsUtil, RewardsService, loggerFactory);
+            TourGuideService = new TourGuideService(tourGuideLogger, GpsUtil, RewardsService, loggerFactory, RewardCentral);
         }
 
         public IRewardCentral RewardCentral { get; set; }

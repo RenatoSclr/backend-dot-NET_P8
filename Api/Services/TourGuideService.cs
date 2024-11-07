@@ -1,5 +1,6 @@
 ﻿using GpsUtil.Location;
 using Microsoft.Extensions.Logging;
+using RewardCentral;
 using System.Diagnostics;
 using System.Globalization;
 using TourGuide.LibrairiesWrappers.Interfaces;
@@ -15,18 +16,20 @@ public class TourGuideService : ITourGuideService
     private readonly ILogger _logger;
     private readonly IGpsUtil _gpsUtil;
     private readonly IRewardsService _rewardsService;
+    private readonly IRewardCentral _rewardsCentral;
     private readonly TripPricer.TripPricer _tripPricer;
     public Tracker Tracker { get; private set; }
     private readonly Dictionary<string, User> _internalUserMap = new();
     private const string TripPricerApiKey = "test-server-api-key";
     private bool _testMode = true;
 
-    public TourGuideService(ILogger<TourGuideService> logger, IGpsUtil gpsUtil, IRewardsService rewardsService, ILoggerFactory loggerFactory)
+    public TourGuideService(ILogger<TourGuideService> logger, IGpsUtil gpsUtil, IRewardsService rewardsService, ILoggerFactory loggerFactory, IRewardCentral rewardsCentral)
     {
         _logger = logger;
         _tripPricer = new();
         _gpsUtil = gpsUtil;
         _rewardsService = rewardsService;
+        _rewardsCentral = rewardsCentral;
 
         CultureInfo.CurrentCulture = new CultureInfo("en-US");
 
@@ -42,6 +45,7 @@ public class TourGuideService : ITourGuideService
 
         Tracker = new Tracker(this, trackerLogger);
         AddShutDownHook();
+        _rewardsCentral = rewardsCentral;
     }
 
     public List<UserReward> GetUserRewards(User user)
@@ -90,7 +94,7 @@ public class TourGuideService : ITourGuideService
         return visitedLocation;
     }
 
-    public Dictionary<Attraction, double> GetNearByAttractions(VisitedLocation visitedLocation)
+    public List<NearAttraction> GetNearByAttractions(VisitedLocation visitedLocation)
     {
         Dictionary<Attraction, double> dict = new Dictionary<Attraction, double>();
 
@@ -99,8 +103,27 @@ public class TourGuideService : ITourGuideService
             dict.Add(attraction, _rewardsService.GetDistance(attraction, visitedLocation.Location));
         }
         dict = dict.OrderBy(kvp => kvp.Value).Take(5).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        return dict;
+
+        var nearAttraction = MapToNearAttraction(dict, visitedLocation);
+        return nearAttraction;
     }
+
+    private List<NearAttraction> MapToNearAttraction(Dictionary<Attraction, double> attractions, VisitedLocation visitedLocation)
+    {
+        return attractions.Select(atr => new NearAttraction
+        {
+            AttractionName = atr.Key.AttractionName,
+            AttractionLatidude = atr.Key.Latitude,
+            AttractionLongitude = atr.Key.Longitude,
+            UserLatitude = visitedLocation.Location.Latitude,
+            UserLongitude = visitedLocation.Location.Longitude,
+            AttractionDistance = atr.Value,
+            RewardPoint = _rewardsCentral.GetAttractionRewardPoints(atr.Key.AttractionId, visitedLocation.UserId)
+        }).ToList();
+    }
+
+
+
 
     private void AddShutDownHook()
     {
