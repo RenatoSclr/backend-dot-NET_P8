@@ -14,7 +14,6 @@ public class RewardsService : IRewardsService
     private readonly int _attractionProximityRange = 200;
     private readonly IGpsUtil _gpsUtil;
     private readonly IRewardCentral _rewardsCentral;
-    private static int count = 0;
 
     public RewardsService(IGpsUtil gpsUtil, IRewardCentral rewardCentral)
     {
@@ -35,7 +34,6 @@ public class RewardsService : IRewardsService
 
     public async Task CalculateRewards(User user)
     {
-        count++;
         List<Attraction> attractions = _gpsUtil.GetAttractions();
 
         var rewardedAttractions = new HashSet<string>(user.UserRewards.Select(r => r.Attraction.AttractionName));
@@ -59,7 +57,18 @@ public class RewardsService : IRewardsService
                 }
             }));
 
-            await Task.WhenAll(tasks);
+            try
+            {
+                await Task.WhenAll(tasks);
+            }
+            catch (AggregateException ex)
+            {
+                foreach (var innerException in ex.InnerExceptions)
+                {
+                    Console.WriteLine($"Handled exception: {innerException.Message}");
+                }
+            }
+
             foreach (var reward in rewardsToAdd)
             {
                 user.AddUserReward(reward);
