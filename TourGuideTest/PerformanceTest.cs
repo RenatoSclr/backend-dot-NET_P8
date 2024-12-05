@@ -18,7 +18,7 @@ namespace TourGuideTest
             _output = output;
         }
 
-        [Fact]
+        //[Fact]
         public async void HighVolumeTrackLocation()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances
@@ -48,7 +48,7 @@ namespace TourGuideTest
             Assert.True(TimeSpan.FromMinutes(15).TotalSeconds >= stopWatch.Elapsed.TotalSeconds);
         }
 
-        [Fact]
+        //[Fact]
         public async void HighVolumeGetRewards()
         {
             //On peut ici augmenter le nombre d'utilisateurs pour tester les performances

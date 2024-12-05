@@ -56,23 +56,22 @@ public class RewardsService : IRewardsService
                     }
                 }
             }));
+        }
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch (AggregateException ex)
+        {
+            foreach (var innerException in ex.InnerExceptions)
+            {
+                Console.WriteLine($"Handled exception: {innerException.Message}");
+            }
+        }
 
-            try
-            {
-                await Task.WhenAll(tasks);
-            }
-            catch (AggregateException ex)
-            {
-                foreach (var innerException in ex.InnerExceptions)
-                {
-                    Console.WriteLine($"Handled exception: {innerException.Message}");
-                }
-            }
-
-            foreach (var reward in rewardsToAdd)
-            {
-                user.AddUserReward(reward);
-            }
+        foreach (var reward in rewardsToAdd)
+        {
+            user.AddUserReward(reward);
         }
     }
 
